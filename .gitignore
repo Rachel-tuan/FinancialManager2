@@ -15,3 +15,5 @@ bookkeeping.log
 # IDE
 .vscode/
 .idea/
+.venv/
+
