@@ -156,7 +156,7 @@ def test_summary_meets_goal(data_dir):
     _write_json('goals.json', {'2026-08': 2500})
     s = get_monthly_summary('2026-08')
     income, expense, balance = monthly_totals(SUMMARY_RECORDS, '2026-08')
-    assert s['month'] == '2026-08', "月份字段错误"
+    assert set(s.keys()) == {'income', 'expense', 'balance', 'goal'}, "summary 结构变化"
     assert (s['income'], s['expense'], s['balance']) == (income, expense, balance), "摘要统计错误"
     assert s['goal'] is not None and s['goal'].status == '达标', "达标状态错误"
 

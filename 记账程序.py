@@ -1,10 +1,9 @@
 import tkinter as tk
-from tkinter import messagebox, ttk, font,filedialog
+from tkinter import messagebox, ttk, filedialog
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
-from decimal import Decimal, ROUND_HALF_UP
 from config import config, EXPENSE
 from services import format_decimal
 from controller import get_monthly_summary
@@ -27,9 +26,6 @@ class FinanceApp:
 
     def open_set_goal_window(self):
         SetGoalDialog(self.root, on_saved=self.refresh_views)
-
-    def show_month_summary_ui(self):
-        SummaryDialog(self.root)
 
     def refresh_views(self):
         self.update_summary()

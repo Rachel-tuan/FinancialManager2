@@ -9,6 +9,9 @@ __pycache__/
 records.json
 goals.json
 
+# Logs
+bookkeeping.log
+
 # IDE
 .vscode/
 .idea/

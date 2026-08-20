@@ -88,14 +88,13 @@ def get_monthly_summary(month):
     """获取指定月份的月度统计摘要。
 
     :param month: 月份字符串（YYYY-MM）
-    :return: dict，包含 month / income / expense / balance；
+    :return: dict，包含 income / expense / balance；
         goal 为 services.GoalStatus 对象（未设置目标时为 None）
     """
     records = load_records()
     income, expense, balance = monthly_totals(records, month)
     goals = load_goals()
     return {
-        'month': month,
         'income': income,
         'expense': expense,
         'balance': balance,

@@ -54,14 +54,6 @@ class Record:
         )
 
 
-@dataclass
-class Goal:
-    """单个月度支出目标，对应 goals.json 中的一个键值对。"""
-
-    month: str
-    amount: float
-
-
 class Goals:
     """月度目标集合，对应 goals.json 的 {月份: 金额} 字典。"""
 

@@ -11,7 +11,7 @@ from datetime import datetime
 from controller import add_record, set_goal, get_monthly_summary
 from services import format_decimal
 from config import config, INCOME, EXPENSE
-from exceptions import ValidationError, StorageError
+from exceptions import ValidationError
 from logger import logger
 
 
