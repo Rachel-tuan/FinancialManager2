@@ -6,6 +6,7 @@
 
 from models import Record, Category, Goals
 from storage import load_records, save_records, load_goals, save_goals
+from services import monthly_totals, monthly_goal
 
 
 def add_record(date, category, amount_str, note):
@@ -66,3 +67,22 @@ def set_goal(month, amount_str):
     goals.set(month, amount)
     save_goals(goals.to_dict())
     return True, f'{month} 月支出目标已设置为 {amount:.2f}！'
+
+
+def get_monthly_summary(month):
+    """获取指定月份的月度统计摘要。
+
+    :param month: 月份字符串（YYYY-MM）
+    :return: dict，包含 month / income / expense / balance；
+        goal 为 services.GoalStatus 对象（未设置目标时为 None）
+    """
+    records = load_records()
+    income, expense, balance = monthly_totals(records, month)
+    goals = load_goals()
+    return {
+        'month': month,
+        'income': income,
+        'expense': expense,
+        'balance': balance,
+        'goal': monthly_goal(goals, month, expense),
+    }

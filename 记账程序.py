@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
-from services import monthly_totals, monthly_goal, format_decimal
-from storage import load_records, load_goals
-from controller import add_record, set_goal
+from services import format_decimal
+from storage import load_records
+from controller import add_record, set_goal, get_monthly_summary
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -167,9 +167,9 @@ def update_summary():
         month = datetime.now().strftime('%Y-%m')
         selected_month.set(month)
     
-    data = load_records()
-    income, expense, balance = monthly_totals(data, month)
-    goal_info = monthly_goal(load_goals(), month, expense)
+    summary = get_monthly_summary(month)
+    income, expense, balance = summary['income'], summary['expense'], summary['balance']
+    goal_info = summary['goal']
     
     # 格式化摘要信息
     summary = f"当前月份: {month}\n\n"
@@ -228,9 +228,9 @@ def show_month_summary_ui():
         if not month:
             month = datetime.now().strftime('%Y-%m')
             
-        data = load_records()
-        income, expense, balance = monthly_totals(data, month)
-        goal_info = monthly_goal(load_goals(), month, expense)
+        summary = get_monthly_summary(month)
+        income, expense, balance = summary['income'], summary['expense'], summary['balance']
+        goal_info = summary['goal']
         
         result_text.delete(1.0, tk.END)
         
