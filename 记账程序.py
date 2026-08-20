@@ -6,7 +6,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import format_decimal
-from controller import add_record, set_goal, get_monthly_summary, get_monthly_records, get_usage_breakdown
+from controller import get_monthly_summary, get_monthly_records, get_usage_breakdown
+from dialogs import AddRecordDialog, SetGoalDialog, SummaryDialog
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -19,154 +20,18 @@ class FinanceApp:
         self.update_chart()
 
     def open_add_record_window(self):
-        # 创建新窗口
-        add_window = tk.Toplevel(self.root)
-        add_window.title('添加账单')
-        add_window.geometry('400x300')
-        add_window.configure(bg='#f5f6fa')
-        add_window.resizable(False, False)
-        add_window.transient(self.root)  # 设置为主窗口的子窗口
-        add_window.grab_set()  # 模态窗口
-
-        # 设置窗口样式
-        title_label = tk.Label(add_window, text='添加新账单', font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#273c75')
-        title_label.pack(pady=10)
-
-        # 创建表单框架
-        form_frame = tk.Frame(add_window, bg='#f5f6fa')
-        form_frame.pack(pady=5, fill='both', expand=True)
-
-        # 日期输入
-        date_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        date_frame.pack(fill='x', pady=5)
-        date_label = tk.Label(date_frame, text='日期:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        date_label.pack(side='left', padx=5)
-        date_var = tk.StringVar(value=datetime.now().strftime('%Y-%m-%d'))
-        date_entry = tk.Entry(date_frame, textvariable=date_var, font=('微软雅黑', 12), width=20)
-        date_entry.pack(side='left', padx=5)
-
-        # 类型选择
-        type_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        type_frame.pack(fill='x', pady=5)
-        type_label = tk.Label(type_frame, text='类型:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        type_label.pack(side='left', padx=5)
-        type_var = tk.StringVar(value='支出')
-        type_combo = ttk.Combobox(type_frame, textvariable=type_var, values=('支出', '收入'), font=('微软雅黑', 12), width=18, state='readonly')
-        type_combo.pack(side='left', padx=5)
-
-        # 金额输入
-        amount_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        amount_frame.pack(fill='x', pady=5)
-        amount_label = tk.Label(amount_frame, text='金额:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        amount_label.pack(side='left', padx=5)
-        amount_var = tk.StringVar()
-        amount_entry = tk.Entry(amount_frame, textvariable=amount_var, font=('微软雅黑', 12), width=20)
-        amount_entry.pack(side='left', padx=5)
-
-        # 用途/备注输入
-        note_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        note_frame.pack(fill='x', pady=5)
-        note_label = tk.Label(note_frame, text='用途/备注:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        note_label.pack(side='left', padx=5)
-        note_var = tk.StringVar()
-        note_entry = tk.Entry(note_frame, textvariable=note_var, font=('微软雅黑', 12), width=20)
-        note_entry.pack(side='left', padx=5)
-
-        # 按钮框架
-        btn_frame = tk.Frame(add_window, bg='#f5f6fa')
-        btn_frame.pack(pady=10)
-
-        # 保存按钮
-        def save_record():
-            try:
-                ok, message = add_record(date_var.get(), type_var.get(), amount_var.get(), note_var.get())
-                if not ok:
-                    messagebox.showwarning('提示', message, parent=add_window)
-                    return
-
-                messagebox.showinfo('成功', message, parent=add_window)
-                self.update_summary()
-                self.update_table()
-                self.update_chart()
-                add_window.destroy()
-            except Exception as e:
-                messagebox.showerror('错误', f'保存失败: {str(e)}', parent=add_window)
-
-        save_btn = tk.Button(btn_frame, text='保存', width=10, font=('微软雅黑', 12), bg='#00b894', fg='white', command=save_record, relief='flat')
-        save_btn.pack(side='left', padx=10)
-
-        # 取消按钮
-        cancel_btn = tk.Button(btn_frame, text='取消', width=10, font=('微软雅黑', 12), bg='#d63031', fg='white', command=add_window.destroy, relief='flat')
-        cancel_btn.pack(side='left', padx=10)
-
-        # 设置初始焦点
-        date_entry.focus_set()
+        AddRecordDialog(self.root, on_saved=self.refresh_views)
 
     def open_set_goal_window(self):
-        # 创建新窗口
-        goal_window = tk.Toplevel(self.root)
-        goal_window.title('设置月度目标')
-        goal_window.geometry('400x200')
-        goal_window.configure(bg='#f5f6fa')
-        goal_window.resizable(False, False)
-        goal_window.transient(self.root)  # 设置为主窗口的子窗口
-        goal_window.grab_set()  # 模态窗口
+        SetGoalDialog(self.root, on_saved=self.refresh_views)
 
-        # 设置窗口样式
-        title_label = tk.Label(goal_window, text='设置月度支出目标', font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#273c75')
-        title_label.pack(pady=10)
+    def show_month_summary_ui(self):
+        SummaryDialog(self.root)
 
-        # 创建表单框架
-        form_frame = tk.Frame(goal_window, bg='#f5f6fa')
-        form_frame.pack(pady=5, fill='both', expand=True)
-
-        # 月份输入
-        month_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        month_frame.pack(fill='x', pady=5)
-        month_label = tk.Label(month_frame, text='月份:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        month_label.pack(side='left', padx=5)
-        month_var = tk.StringVar(value=datetime.now().strftime('%Y-%m'))
-        month_entry = tk.Entry(month_frame, textvariable=month_var, font=('微软雅黑', 12), width=20)
-        month_entry.pack(side='left', padx=5)
-
-        # 目标金额输入
-        amount_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        amount_frame.pack(fill='x', pady=5)
-        amount_label = tk.Label(amount_frame, text='目标金额:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        amount_label.pack(side='left', padx=5)
-        amount_var = tk.StringVar()
-        amount_entry = tk.Entry(amount_frame, textvariable=amount_var, font=('微软雅黑', 12), width=20)
-        amount_entry.pack(side='left', padx=5)
-
-        # 按钮框架
-        btn_frame = tk.Frame(goal_window, bg='#f5f6fa')
-        btn_frame.pack(pady=10)
-
-        # 保存按钮
-        def save_goal():
-            try:
-                ok, message = set_goal(month_var.get(), amount_var.get())
-                if not ok:
-                    messagebox.showwarning('提示', message, parent=goal_window)
-                    return
-
-                messagebox.showinfo('成功', message, parent=goal_window)
-                self.update_summary()
-                self.update_table()
-                self.update_chart()
-                goal_window.destroy()
-            except Exception as e:
-                messagebox.showerror('错误', f'保存失败: {str(e)}', parent=goal_window)
-
-        save_btn = tk.Button(btn_frame, text='保存', width=10, font=('微软雅黑', 12), bg='#00b894', fg='white', command=save_goal, relief='flat')
-        save_btn.pack(side='left', padx=10)
-
-        # 取消按钮
-        cancel_btn = tk.Button(btn_frame, text='取消', width=10, font=('微软雅黑', 12), bg='#d63031', fg='white', command=goal_window.destroy, relief='flat')
-        cancel_btn.pack(side='left', padx=10)
-
-        # 设置初始焦点
-        month_entry.focus_set()
+    def refresh_views(self):
+        self.update_summary()
+        self.update_table()
+        self.update_chart()
 
     def update_summary(self):
         month = self.selected_month.get().strip()
@@ -195,80 +60,7 @@ class FinanceApp:
         self.summary_var.set(summary)
 
     def show_month_summary_ui(self):
-        # 创建新窗口
-        summary_window = tk.Toplevel(self.root)
-        summary_window.title('月度统计')
-        summary_window.geometry('400x300')
-        summary_window.configure(bg='#f5f6fa')
-        summary_window.resizable(False, False)
-        summary_window.transient(self.root)  # 设置为主窗口的子窗口
-        summary_window.grab_set()  # 模态窗口
-
-        # 设置窗口样式
-        title_label = tk.Label(summary_window, text='月度收支统计', font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#273c75')
-        title_label.pack(pady=10)
-
-        # 创建表单框架
-        form_frame = tk.Frame(summary_window, bg='#f5f6fa')
-        form_frame.pack(pady=5, fill='x')
-
-        # 月份输入
-        month_frame = tk.Frame(form_frame, bg='#f5f6fa')
-        month_frame.pack(fill='x', pady=5)
-        month_label = tk.Label(month_frame, text='月份:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
-        month_label.pack(side='left', padx=5)
-        month_var = tk.StringVar(value=datetime.now().strftime('%Y-%m'))
-        month_entry = tk.Entry(month_frame, textvariable=month_var, font=('微软雅黑', 12), width=15)
-        month_entry.pack(side='left', padx=5)
-
-        # 结果显示框架
-        result_frame = tk.Frame(summary_window, bg='#f5f6fa')
-        result_frame.pack(pady=10, fill='both', expand=True)
-
-        # 结果文本框
-        result_text = tk.Text(result_frame, font=('微软雅黑', 12), width=35, height=8, bg='white', relief='flat')
-        result_text.pack(padx=20, pady=5, fill='both', expand=True)
-
-        # 查询按钮
-        def query_summary():
-            month = month_var.get().strip()
-            if not month:
-                month = datetime.now().strftime('%Y-%m')
-
-            summary = get_monthly_summary(month)
-            income, expense, balance = summary['income'], summary['expense'], summary['balance']
-            goal_info = summary['goal']
-
-            result_text.delete(1.0, tk.END)
-
-            result_text.insert(tk.END, f"月份: {month}\n\n")
-            result_text.insert(tk.END, f"总收入: {format_decimal(income)} 元\n")
-            result_text.insert(tk.END, f"总支出: {format_decimal(expense)} 元\n")
-            result_text.insert(tk.END, f"结余: {format_decimal(balance)} 元\n\n")
-
-            if goal_info is not None:
-                result_text.insert(tk.END, f"本月目标: {format_decimal(goal_info.goal)} 元\n")
-                result_text.insert(tk.END, f"剩余额度: {format_decimal(goal_info.remaining)} 元 ({goal_info.status})")
-            else:
-                result_text.insert(tk.END, "本月未设置支出目标")
-
-            result_text.config(state='disabled')
-
-        # 按钮框架
-        btn_frame = tk.Frame(summary_window, bg='#f5f6fa')
-        btn_frame.pack(pady=10)
-
-        query_btn = tk.Button(btn_frame, text='查询', width=10, font=('微软雅黑', 12), bg='#00b894', fg='white', command=query_summary, relief='flat')
-        query_btn.pack(side='left', padx=10)
-
-        close_btn = tk.Button(btn_frame, text='关闭', width=10, font=('微软雅黑', 12), bg='#d63031', fg='white', command=summary_window.destroy, relief='flat')
-        close_btn.pack(side='left', padx=10)
-
-        # 初始查询
-        query_summary()
-
-        # 设置初始焦点
-        month_entry.focus_set()
+        SummaryDialog(self.root)
 
     def update_table(self):
         # 清空表格
