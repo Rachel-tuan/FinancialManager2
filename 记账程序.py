@@ -6,8 +6,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import monthly_totals, monthly_goal, format_decimal
-from storage import load_records, save_records, load_goals, save_goals
-from controller import add_record
+from storage import load_records, load_goals
+from controller import add_record, set_goal
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -138,28 +138,12 @@ def open_set_goal_window():
     # 保存按钮
     def save_goal():
         try:
-            month = month_var.get().strip()
-            amount_str = amount_var.get().strip()
-            
-            if not month or not amount_str:
-                messagebox.showwarning('提示', '月份和目标金额不能为空！', parent=goal_window)
-                return
-                
-            try:
-                amount = float(amount_str)
-            except ValueError:
-                messagebox.showwarning('提示', '目标金额必须是数字！', parent=goal_window)
+            ok, message = set_goal(month_var.get(), amount_var.get())
+            if not ok:
+                messagebox.showwarning('提示', message, parent=goal_window)
                 return
             
-            if amount <= 0:
-                messagebox.showwarning('提示', '目标金额必须为正数！', parent=goal_window)
-                return
-            
-            goals = load_goals()
-            goals[month] = amount
-            save_goals(goals)
-            
-            messagebox.showinfo('成功', f'{month} 月支出目标已设置为 {amount:.2f}！', parent=goal_window)
+            messagebox.showinfo('成功', message, parent=goal_window)
             update_summary()
             update_table()
             update_chart()

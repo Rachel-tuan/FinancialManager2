@@ -4,8 +4,8 @@
 以 (是否成功, 提示信息) 返回结果；UI 只负责展示。
 """
 
-from models import Record, Category
-from storage import load_records, save_records
+from models import Record, Category, Goals
+from storage import load_records, save_records, load_goals, save_goals
 
 
 def add_record(date, category, amount_str, note):
@@ -39,3 +39,30 @@ def add_record(date, category, amount_str, note):
     data.append(record.to_dict())
     save_records(data)
     return True, '账单已添加！'
+
+
+def set_goal(month, amount_str):
+    """设置指定月份的目标金额。
+
+    :param month: 月份原始输入字符串（YYYY-MM），内部做清洗
+    :param amount_str: 目标金额原始输入字符串，内部完成清洗与校验
+    :return: (是否成功, 提示信息)；失败时不写入任何数据
+    """
+    month = month.strip()
+    amount_str = amount_str.strip()
+
+    if not month or not amount_str:
+        return False, '月份和目标金额不能为空！'
+
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        return False, '目标金额必须是数字！'
+
+    if amount <= 0:
+        return False, '目标金额必须为正数！'
+
+    goals = Goals.from_dict(load_goals())
+    goals.set(month, amount)
+    save_goals(goals.to_dict())
+    return True, f'{month} 月支出目标已设置为 {amount:.2f}！'
