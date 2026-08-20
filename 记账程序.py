@@ -6,8 +6,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import format_decimal
-from controller import get_monthly_summary, get_monthly_records, get_usage_breakdown
+from controller import get_monthly_summary
 from dialogs import AddRecordDialog, SetGoalDialog, SummaryDialog
+from view_models import build_table_rows, build_expense_chart_data
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -73,22 +74,19 @@ class FinanceApp:
             month = datetime.now().strftime('%Y-%m')
             self.selected_month.set(month)
 
-        # 获取当前月份数据并按日期降序排序
-        sorted_data = sorted(get_monthly_records(month), key=lambda x: x['date'], reverse=True)
+        # 获取展示数据（过滤、排序、金额格式化由 view_models 完成）
+        rows = build_table_rows(month)
 
         # 填充表格
-        for r in sorted_data:
-            # 格式化金额，收入为正数，支出为负数
-            amount = r['amount']
+        for r in rows:
+            # 金额颜色，支出为红色，收入为绿色
             if r['category'] == '支出':
-                amount_str = f"-{amount:.2f}"
-                amount_color = '#d63031'  # 支出用红色
+                amount_color = '#d63031'
             else:
-                amount_str = f"+{amount:.2f}"
-                amount_color = '#00b894'  # 收入用绿色
+                amount_color = '#00b894'
 
             # 插入数据行
-            item_id = self.table.insert('', 'end', values=(r['date'], r['category'], amount_str, r['note']))
+            item_id = self.table.insert('', 'end', values=(r['date'], r['category'], r['amount'], r['note']))
 
             # 设置金额列的颜色
             self.table.tag_configure(f'amount_{item_id}', foreground=amount_color)
@@ -272,18 +270,15 @@ class FinanceApp:
             month = datetime.now().strftime('%Y-%m')
             self.selected_month.set(month)
 
-        usage = get_usage_breakdown(month)
+        chart_data = build_expense_chart_data(month)
+        labels = chart_data['labels']
+        sizes = chart_data['values']
 
         self.ax.clear()
-        if usage:
+        if labels:
             # 设置中文字体，解决方框显示问题
             plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun', 'Arial Unicode MS']
             plt.rcParams['axes.unicode_minus'] = False
-
-            # 按金额从大到小排序
-            sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
-            labels = [item[0] for item in sorted_usage]
-            sizes = [item[1] for item in sorted_usage]
 
             # 计算总支出
             total = sum(sizes)
