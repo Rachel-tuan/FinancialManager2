@@ -7,6 +7,7 @@ import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import monthly_totals, monthly_goal, format_decimal
 from storage import load_records, save_records, load_goals, save_goals
+from controller import add_record
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -71,33 +72,12 @@ def open_add_record_window():
     # 保存按钮
     def save_record():
         try:
-            date = date_var.get()
-            category = type_var.get()
-            amount_str = amount_var.get().strip()
-            note = note_var.get().strip()
-            
-            if not amount_str or not category:
-                messagebox.showwarning('提示', '类型和金额不能为空！', parent=add_window)
-                return
-                
-            try:
-                amount = float(amount_str)
-            except ValueError:
-                messagebox.showwarning('提示', '金额必须是数字！', parent=add_window)
+            ok, message = add_record(date_var.get(), type_var.get(), amount_var.get(), note_var.get())
+            if not ok:
+                messagebox.showwarning('提示', message, parent=add_window)
                 return
             
-            if amount <= 0:
-                messagebox.showwarning('提示', '金额必须为正数！', parent=add_window)
-                return
-            
-            amount = abs(amount)
-            
-            record = {'date': date, 'category': category, 'amount': amount, 'note': note}
-            data = load_records()
-            data.append(record)
-            save_records(data)
-            
-            messagebox.showinfo('成功', '账单已添加！', parent=add_window)
+            messagebox.showinfo('成功', message, parent=add_window)
             update_summary()
             update_table()
             update_chart()
