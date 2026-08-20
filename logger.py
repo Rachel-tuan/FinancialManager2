@@ -5,9 +5,8 @@
 """
 
 import logging
-import os
 
-LOG_FILE = os.environ.get('LOG_FILE', 'bookkeeping.log')
+from config import config
 
 _FORMAT = '%(asctime)s [%(levelname)s] %(module)s.%(funcName)s: %(message)s'
 
@@ -18,7 +17,7 @@ def _create_logger():
     if not logger.handlers:
         formatter = logging.Formatter(_FORMAT)
 
-        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        file_handler = logging.FileHandler(config.log_file, encoding='utf-8')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
@@ -29,6 +28,7 @@ def _create_logger():
 
 
 logger = _create_logger()
+LOG_FILE = config.log_file  # 兼容别名
 
 
 def debug(message, *args, **kwargs):

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
-from config import MONTH_FORMAT, EXPENSE
+from config import config, EXPENSE
 from services import format_decimal
 from controller import get_monthly_summary
 from dialogs import AddRecordDialog, SetGoalDialog, SummaryDialog
@@ -39,7 +39,7 @@ class FinanceApp:
     def update_summary(self):
         month = self.selected_month.get().strip()
         if not month:
-            month = datetime.now().strftime(MONTH_FORMAT)
+            month = datetime.now().strftime(config.month_format)
             self.selected_month.set(month)
 
         summary = get_monthly_summary(month)
@@ -73,7 +73,7 @@ class FinanceApp:
         # 获取选择的月份
         month = self.selected_month.get().strip()
         if not month:
-            month = datetime.now().strftime(MONTH_FORMAT)
+            month = datetime.now().strftime(config.month_format)
             self.selected_month.set(month)
 
         # 获取展示数据（过滤、排序、金额格式化由 view_models 完成）
@@ -172,7 +172,7 @@ class FinanceApp:
         month_label.pack(side='left', padx=5)
 
         # 创建全局月份变量
-        self.selected_month = tk.StringVar(value=datetime.now().strftime(MONTH_FORMAT))
+        self.selected_month = tk.StringVar(value=datetime.now().strftime(config.month_format))
         month_entry = tk.Entry(month_select_frame, textvariable=self.selected_month, font=('微软雅黑', 12), width=10)
         month_entry.pack(side='left', padx=5)
 
@@ -269,7 +269,7 @@ class FinanceApp:
     def update_chart(self):
         month = self.selected_month.get().strip()
         if not month:
-            month = datetime.now().strftime(MONTH_FORMAT)
+            month = datetime.now().strftime(config.month_format)
             self.selected_month.set(month)
 
         chart_data = build_expense_chart_data(month)

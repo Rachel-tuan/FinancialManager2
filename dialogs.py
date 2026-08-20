@@ -10,7 +10,7 @@ from datetime import datetime
 
 from controller import add_record, set_goal, get_monthly_summary
 from services import format_decimal
-from config import INCOME, EXPENSE, MONTH_FORMAT, DATE_FORMAT
+from config import config, INCOME, EXPENSE
 from exceptions import ValidationError, StorageError
 from logger import logger
 
@@ -43,7 +43,7 @@ class AddRecordDialog:
         date_frame.pack(fill='x', pady=5)
         date_label = tk.Label(date_frame, text='日期:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
         date_label.pack(side='left', padx=5)
-        self.date_var = tk.StringVar(value=datetime.now().strftime(DATE_FORMAT))
+        self.date_var = tk.StringVar(value=datetime.now().strftime(config.date_format))
         self.date_entry = tk.Entry(date_frame, textvariable=self.date_var, font=('微软雅黑', 12), width=20)
         self.date_entry.pack(side='left', padx=5)
 
@@ -135,7 +135,7 @@ class SetGoalDialog:
         month_frame.pack(fill='x', pady=5)
         month_label = tk.Label(month_frame, text='月份:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
         month_label.pack(side='left', padx=5)
-        self.month_var = tk.StringVar(value=datetime.now().strftime(MONTH_FORMAT))
+        self.month_var = tk.StringVar(value=datetime.now().strftime(config.month_format))
         self.month_entry = tk.Entry(month_frame, textvariable=self.month_var, font=('微软雅黑', 12), width=20)
         self.month_entry.pack(side='left', padx=5)
 
@@ -207,7 +207,7 @@ class SummaryDialog:
         month_frame.pack(fill='x', pady=5)
         month_label = tk.Label(month_frame, text='月份:', width=10, anchor='e', font=('微软雅黑', 12), bg='#f5f6fa')
         month_label.pack(side='left', padx=5)
-        self.month_var = tk.StringVar(value=datetime.now().strftime(MONTH_FORMAT))
+        self.month_var = tk.StringVar(value=datetime.now().strftime(config.month_format))
         self.month_entry = tk.Entry(month_frame, textvariable=self.month_var, font=('微软雅黑', 12), width=15)
         self.month_entry.pack(side='left', padx=5)
 
@@ -238,7 +238,7 @@ class SummaryDialog:
     def _query(self):
         month = self.month_var.get().strip()
         if not month:
-            month = datetime.now().strftime(MONTH_FORMAT)
+            month = datetime.now().strftime(config.month_format)
 
         summary = get_monthly_summary(month)
         income, expense, balance = summary['income'], summary['expense'], summary['balance']

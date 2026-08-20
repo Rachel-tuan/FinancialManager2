@@ -1,12 +1,12 @@
 import json
 import os
 
-from config import DATA_FILE, GOAL_FILE
+from config import config
 from exceptions import StorageError
 from logger import logger
 
-DEFAULT_RECORDS_FILE = DATA_FILE
-DEFAULT_GOALS_FILE = GOAL_FILE
+DEFAULT_RECORDS_FILE = config.data_file
+DEFAULT_GOALS_FILE = config.goal_file
 
 
 def load_records(filepath=DEFAULT_RECORDS_FILE):
