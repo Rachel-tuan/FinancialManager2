@@ -1,8 +1,12 @@
 """storage 层测试：文件读写、JSON 格式兼容。"""
 
 import json
+import os
+
+import pytest
 
 import storage
+from exceptions import StorageError
 
 RECORDS = [
     {'date': '2026-08-01', 'category': '收入', 'amount': 8000.0, 'note': '工资'},
@@ -56,3 +60,27 @@ def test_empty_data_save_load(tmp_path):
     gp = str(tmp_path / 'eg.json')
     storage.save_goals({}, gp)
     assert storage.load_goals(gp) == {}, "空字典往返不一致"
+
+
+def test_load_corrupt_json_raises_storage_error(tmp_path):
+    rp = str(tmp_path / 'records.json')
+    with open(rp, 'w', encoding='utf-8') as f:
+        f.write('{ 这不是合法的 JSON')
+    with pytest.raises(StorageError) as ei:
+        storage.load_records(rp)
+    assert '读取记录文件失败' in str(ei.value), f"StorageError 消息不符: {str(ei.value)}"
+    gp = str(tmp_path / 'goals.json')
+    with open(gp, 'w', encoding='utf-8') as f:
+        f.write('[1, 2,')
+    with pytest.raises(StorageError):
+        storage.load_goals(gp)
+
+
+def test_save_unwritable_path_raises_storage_error(tmp_path):
+    rp = str(tmp_path / 'adir')
+    os.mkdir(rp)
+    with pytest.raises(StorageError) as ei:
+        storage.save_records(RECORDS, rp)
+    assert '保存记录文件失败' in str(ei.value), f"StorageError 消息不符: {str(ei.value)}"
+    with pytest.raises(StorageError):
+        storage.save_goals(GOALS, rp)

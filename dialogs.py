@@ -11,6 +11,7 @@ from datetime import datetime
 from controller import add_record, set_goal, get_monthly_summary
 from services import format_decimal
 from config import INCOME, EXPENSE, MONTH_FORMAT, DATE_FORMAT
+from exceptions import ValidationError, StorageError
 
 
 class AddRecordDialog:
@@ -90,16 +91,17 @@ class AddRecordDialog:
         try:
             ok, message = add_record(self.date_var.get(), self.type_var.get(),
                                      self.amount_var.get(), self.note_var.get())
-            if not ok:
-                messagebox.showwarning('提示', message, parent=self.window)
-                return
-
-            messagebox.showinfo('成功', message, parent=self.window)
-            if self.on_saved is not None:
-                self.on_saved()
-            self.window.destroy()
+        except ValidationError as e:
+            messagebox.showwarning('提示', str(e), parent=self.window)
+            return
         except Exception as e:
             messagebox.showerror('错误', f'保存失败: {str(e)}', parent=self.window)
+            return
+
+        messagebox.showinfo('成功', message, parent=self.window)
+        if self.on_saved is not None:
+            self.on_saved()
+        self.window.destroy()
 
 
 class SetGoalDialog:
@@ -160,16 +162,17 @@ class SetGoalDialog:
     def _save(self):
         try:
             ok, message = set_goal(self.month_var.get(), self.amount_var.get())
-            if not ok:
-                messagebox.showwarning('提示', message, parent=self.window)
-                return
-
-            messagebox.showinfo('成功', message, parent=self.window)
-            if self.on_saved is not None:
-                self.on_saved()
-            self.window.destroy()
+        except ValidationError as e:
+            messagebox.showwarning('提示', str(e), parent=self.window)
+            return
         except Exception as e:
             messagebox.showerror('错误', f'保存失败: {str(e)}', parent=self.window)
+            return
+
+        messagebox.showinfo('成功', message, parent=self.window)
+        if self.on_saved is not None:
+            self.on_saved()
+        self.window.destroy()
 
 
 class SummaryDialog:

@@ -8,6 +8,7 @@ import pytest
 import storage
 from controller import (add_record, set_goal, get_monthly_summary,
                         get_monthly_records, get_usage_breakdown)
+from exceptions import ValidationError
 from services import monthly_totals, monthly_goal
 
 ADD_CASES = [
@@ -57,56 +58,40 @@ def _write_json(filename, obj):
         json.dump(obj, f, ensure_ascii=False, indent=2)
 
 
-def old_save_record(date, category, amount_str, note, data):
-    amount_str = amount_str.strip()
-    note = note.strip()
-    if not amount_str or not category:
-        return False, '类型和金额不能为空！', data
-    try:
-        amount = float(amount_str)
-    except ValueError:
-        return False, '金额必须是数字！', data
-    if amount <= 0:
-        return False, '金额必须为正数！', data
-    amount = abs(amount)
-    record = {'date': date, 'category': category, 'amount': amount, 'note': note}
-    data.append(record)
-    return True, '账单已添加！', data
-
-
-def old_save_goal(month, amount_str, goals):
-    month = month.strip()
-    amount_str = amount_str.strip()
-    if not month or not amount_str:
-        return False, '月份和目标金额不能为空！', goals
-    try:
-        amount = float(amount_str)
-    except ValueError:
-        return False, '目标金额必须是数字！', goals
-    if amount <= 0:
-        return False, '目标金额必须为正数！', goals
-    goals = dict(goals)
-    goals[month] = amount
-    return True, f'{month} 月支出目标已设置为 {amount:.2f}！', goals
-
-
 # ---------- add_record ----------
 
 def test_add_record_cases_match_old_behavior(data_dir):
+    # 旧实现（v0.10.0 之前）的返回值语义，用于校验消息文本与写入行为
+    expected = {
+        ('2026-08-01', '收入', '8000', '工资'): (True, '账单已添加！'),
+        ('2026-08-03', '支出', '1500.5', '房租'): (True, '账单已添加！'),
+        ('2026-08-10', '支出', ' 200.25 ', ' 餐饮 '): (True, '账单已添加！'),
+        ('2026-08-15', '支出', '50', ''): (True, '账单已添加！'),
+        ('2026-08-20', '收入', 'abc', '兼职'): '金额必须是数字！',
+        ('2026-08-21', '收入', '', '备注'): '类型和金额不能为空！',
+        ('2026-08-22', '支出', '-5', '负金额'): '金额必须为正数！',
+        ('2026-08-23', '支出', '0', '零'): '金额必须为正数！',
+    }
     for i, (date, cat, amt, note) in enumerate(ADD_CASES):
         before = storage.load_records()
-        ok, msg = add_record(date, cat, amt, note)
-        new_file = storage.load_records()
-        old_ok, old_msg, old_data = old_save_record(date, cat, amt, note, [dict(r) for r in before])
-        assert ok == old_ok, f"case{i}: ok 不一致 {ok} vs {old_ok}"
-        assert msg == old_msg, f"case{i}: msg 不一致 {msg!r} vs {old_msg!r}"
-        if not ok:
-            assert new_file == before, f"case{i}: 校验失败却写入了数据"
-        assert new_file == old_data, f"case{i}: 写入内容与旧实现不一致"
-        if ok:
+        result = expected[(date, cat, amt, note)]
+        if isinstance(result, tuple):
+            exp_ok, exp_msg = result
+            ok, msg = add_record(date, cat, amt, note)
+            assert ok == exp_ok, f"case{i}: ok 不一致 {ok} vs {exp_ok}"
+            assert msg == exp_msg, f"case{i}: msg 不一致 {msg!r} vs {exp_msg!r}"
+            new_file = storage.load_records()
+            old_data = [dict(r) for r in before]
+            old_data.append({'date': date, 'category': cat, 'amount': float(amt.strip()), 'note': note.strip()})
+            assert new_file == old_data, f"case{i}: 写入内容与旧实现不一致"
             raw = open(storage.DEFAULT_RECORDS_FILE, 'rb').read()
-            expected = json.dumps(old_data, ensure_ascii=False, indent=2).encode('utf-8')
-            assert raw == expected, f"case{i}: 文件字节格式不一致"
+            expected_bytes = json.dumps(old_data, ensure_ascii=False, indent=2).encode('utf-8')
+            assert raw == expected_bytes, f"case{i}: 文件字节格式不一致"
+        else:
+            with pytest.raises(ValidationError) as ei:
+                add_record(date, cat, amt, note)
+            assert str(ei.value) == result, f"case{i}: 提示文字不一致 {str(ei.value)!r} vs {result!r}"
+            assert storage.load_records() == before, f"case{i}: 校验失败却写入了数据"
 
 
 def test_add_record_accumulates(data_dir):
@@ -117,27 +102,45 @@ def test_add_record_accumulates(data_dir):
 
 
 def test_add_record_invalid_category_raises(data_dir):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValidationError) as ei:
         add_record('2026-09-03', '其他', '100', 'x')
+    assert '无效的账单分类' in str(ei.value), f"提示文字不符: {str(ei.value)}"
 
 
 # ---------- set_goal ----------
 
 def test_set_goal_cases_match_old_behavior(data_dir):
+    # 旧实现（v0.10.0 之前）的返回值语义，用于校验消息文本与写入行为
+    expected = {
+        ('2026-08', '2500'): (True, '2026-08 月支出目标已设置为 2500.00！'),
+        ('2026-08', ' 3000 '): (True, '2026-08 月支出目标已设置为 3000.00！'),
+        (' 2026-07 ', '1000'): (True, '2026-07 月支出目标已设置为 1000.00！'),
+        ('2026-09', ''): '月份和目标金额不能为空！',
+        ('', '100'): '月份和目标金额不能为空！',
+        ('2026-10', 'abc'): '目标金额必须是数字！',
+        ('2026-11', '0'): '目标金额必须为正数！',
+        ('2026-12', '-5'): '目标金额必须为正数！',
+    }
     for i, (month, amt) in enumerate(GOAL_CASES):
         before = storage.load_goals()
-        ok, msg = set_goal(month, amt)
-        new_goals = storage.load_goals()
-        old_ok, old_msg, old_goals = old_save_goal(month, amt, before)
-        assert ok == old_ok, f"case{i}: ok 不一致 {ok} vs {old_ok}"
-        assert msg == old_msg, f"case{i}: msg 不一致 {msg!r} vs {old_msg!r}"
-        if not ok:
-            assert new_goals == before, f"case{i}: 校验失败却写入了数据"
-        assert new_goals == old_goals, f"case{i}: 写入内容与旧实现不一致"
-        if ok:
+        result = expected[(month, amt)]
+        if isinstance(result, tuple):
+            exp_ok, exp_msg = result
+            ok, msg = set_goal(month, amt)
+            assert ok == exp_ok, f"case{i}: ok 不一致 {ok} vs {exp_ok}"
+            assert msg == exp_msg, f"case{i}: msg 不一致 {msg!r} vs {exp_msg!r}"
+            new_goals = storage.load_goals()
+            old_goals = dict(before)
+            old_goals[month.strip()] = float(amt.strip())
+            assert new_goals == old_goals, f"case{i}: 写入内容与旧实现不一致"
             raw = open(storage.DEFAULT_GOALS_FILE, 'rb').read()
-            expected = json.dumps(old_goals, ensure_ascii=False, indent=2).encode('utf-8')
-            assert raw == expected, f"case{i}: 文件字节格式不一致"
+            expected_bytes = json.dumps(old_goals, ensure_ascii=False, indent=2).encode('utf-8')
+            assert raw == expected_bytes, f"case{i}: 文件字节格式不一致"
+        else:
+            with pytest.raises(ValidationError) as ei:
+                set_goal(month, amt)
+            assert str(ei.value) == result, f"case{i}: 提示文字不一致 {str(ei.value)!r} vs {result!r}"
+            assert storage.load_goals() == before, f"case{i}: 校验失败却写入了数据"
 
 
 def test_set_goal_overwrites_existing(data_dir):

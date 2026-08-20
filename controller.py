@@ -7,6 +7,7 @@
 from models import Record, Category, Goals
 from storage import load_records, save_records, load_goals, save_goals
 from services import monthly_totals, monthly_goal
+from exceptions import ValidationError
 
 
 def add_record(date, category, amount_str, note):
@@ -16,26 +17,30 @@ def add_record(date, category, amount_str, note):
     :param category: 分类字符串（收入/支出）
     :param amount_str: 金额原始输入字符串，内部完成清洗与校验
     :param note: 用途/备注
-    :return: (是否成功, 提示信息)；失败时不写入任何数据
+    :return: (True, 提示信息)；校验失败时抛出 ValidationError，且不写入任何数据
     """
     amount_str = amount_str.strip()
     note = note.strip()
 
     if not amount_str or not category:
-        return False, '类型和金额不能为空！'
+        raise ValidationError('类型和金额不能为空！')
 
     try:
         amount = float(amount_str)
     except ValueError:
-        return False, '金额必须是数字！'
+        raise ValidationError('金额必须是数字！') from None
 
     if amount <= 0:
-        return False, '金额必须为正数！'
+        raise ValidationError('金额必须为正数！')
 
     amount = abs(amount)
 
-    record = Record(date=date, category=Category.from_value(category),
-                    amount=amount, note=note)
+    try:
+        record = Record(date=date, category=Category.from_value(category),
+                        amount=amount, note=note)
+    except ValueError as e:
+        raise ValidationError(str(e)) from None
+
     data = load_records()
     data.append(record.to_dict())
     save_records(data)
@@ -47,21 +52,21 @@ def set_goal(month, amount_str):
 
     :param month: 月份原始输入字符串（YYYY-MM），内部做清洗
     :param amount_str: 目标金额原始输入字符串，内部完成清洗与校验
-    :return: (是否成功, 提示信息)；失败时不写入任何数据
+    :return: (True, 提示信息)；校验失败时抛出 ValidationError，且不写入任何数据
     """
     month = month.strip()
     amount_str = amount_str.strip()
 
     if not month or not amount_str:
-        return False, '月份和目标金额不能为空！'
+        raise ValidationError('月份和目标金额不能为空！')
 
     try:
         amount = float(amount_str)
     except ValueError:
-        return False, '目标金额必须是数字！'
+        raise ValidationError('目标金额必须是数字！') from None
 
     if amount <= 0:
-        return False, '目标金额必须为正数！'
+        raise ValidationError('目标金额必须为正数！')
 
     goals = Goals.from_dict(load_goals())
     goals.set(month, amount)
