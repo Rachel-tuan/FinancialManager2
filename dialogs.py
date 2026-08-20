@@ -12,6 +12,7 @@ from controller import add_record, set_goal, get_monthly_summary
 from services import format_decimal
 from config import INCOME, EXPENSE, MONTH_FORMAT, DATE_FORMAT
 from exceptions import ValidationError, StorageError
+from logger import logger
 
 
 class AddRecordDialog:
@@ -92,9 +93,11 @@ class AddRecordDialog:
             ok, message = add_record(self.date_var.get(), self.type_var.get(),
                                      self.amount_var.get(), self.note_var.get())
         except ValidationError as e:
+            logger.warning(f'新增账单校验失败: {e}')
             messagebox.showwarning('提示', str(e), parent=self.window)
             return
         except Exception as e:
+            logger.error(f'新增账单保存异常: {e}')
             messagebox.showerror('错误', f'保存失败: {str(e)}', parent=self.window)
             return
 
@@ -163,9 +166,11 @@ class SetGoalDialog:
         try:
             ok, message = set_goal(self.month_var.get(), self.amount_var.get())
         except ValidationError as e:
+            logger.warning(f'设置目标校验失败: {e}')
             messagebox.showwarning('提示', str(e), parent=self.window)
             return
         except Exception as e:
+            logger.error(f'设置目标保存异常: {e}')
             messagebox.showerror('错误', f'保存失败: {str(e)}', parent=self.window)
             return
 

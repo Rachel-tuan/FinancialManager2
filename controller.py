@@ -8,6 +8,7 @@ from models import Record, Category, Goals
 from storage import load_records, save_records, load_goals, save_goals
 from services import monthly_totals, monthly_goal
 from exceptions import ValidationError
+from logger import logger
 
 
 def add_record(date, category, amount_str, note):
@@ -23,14 +24,17 @@ def add_record(date, category, amount_str, note):
     note = note.strip()
 
     if not amount_str or not category:
+        logger.warning('新增账单校验失败: 类型和金额不能为空！')
         raise ValidationError('类型和金额不能为空！')
 
     try:
         amount = float(amount_str)
     except ValueError:
+        logger.warning('新增账单校验失败: 金额必须为数字')
         raise ValidationError('金额必须是数字！') from None
 
     if amount <= 0:
+        logger.warning('新增账单校验失败: 金额必须为正数')
         raise ValidationError('金额必须为正数！')
 
     amount = abs(amount)
@@ -39,11 +43,13 @@ def add_record(date, category, amount_str, note):
         record = Record(date=date, category=Category.from_value(category),
                         amount=amount, note=note)
     except ValueError as e:
+        logger.warning(f'新增账单校验失败: {e}')
         raise ValidationError(str(e)) from None
 
     data = load_records()
     data.append(record.to_dict())
     save_records(data)
+    logger.info(f'新增账单: 日期={date} 类型={category} 金额={amount} 备注={note}')
     return True, '账单已添加！'
 
 
@@ -58,19 +64,23 @@ def set_goal(month, amount_str):
     amount_str = amount_str.strip()
 
     if not month or not amount_str:
+        logger.warning('设置目标校验失败: 月份和目标金额不能为空！')
         raise ValidationError('月份和目标金额不能为空！')
 
     try:
         amount = float(amount_str)
     except ValueError:
+        logger.warning('设置目标校验失败: 目标金额必须为数字')
         raise ValidationError('目标金额必须是数字！') from None
 
     if amount <= 0:
+        logger.warning('设置目标校验失败: 目标金额必须为正数')
         raise ValidationError('目标金额必须为正数！')
 
     goals = Goals.from_dict(load_goals())
     goals.set(month, amount)
     save_goals(goals.to_dict())
+    logger.info(f'设置目标: 月份={month} 金额={amount}')
     return True, f'{month} 月支出目标已设置为 {amount:.2f}！'
 
 
