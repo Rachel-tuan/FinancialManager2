@@ -1,38 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, font,filedialog
-import json
-import os
 from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import monthly_totals, monthly_goal, format_decimal
+from storage import load_records, save_records, load_goals, save_goals
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
-
-DATA_FILE = 'records.json'
-GOAL_FILE = 'goals.json'
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
-
-def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def load_goals():
-    if os.path.exists(GOAL_FILE):
-        with open(GOAL_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
-
-def save_goals(goals):
-    with open(GOAL_FILE, 'w', encoding='utf-8') as f:
-        json.dump(goals, f, ensure_ascii=False, indent=2)
 
 def open_add_record_window():
     # 创建新窗口
@@ -117,9 +93,9 @@ def open_add_record_window():
             amount = abs(amount)
             
             record = {'date': date, 'category': category, 'amount': amount, 'note': note}
-            data = load_data()
+            data = load_records()
             data.append(record)
-            save_data(data)
+            save_records(data)
             
             messagebox.showinfo('成功', '账单已添加！', parent=add_window)
             update_summary()
@@ -227,7 +203,7 @@ def update_summary():
         month = datetime.now().strftime('%Y-%m')
         selected_month.set(month)
     
-    data = load_data()
+    data = load_records()
     income, expense, balance = monthly_totals(data, month)
     goal_info = monthly_goal(load_goals(), month, expense)
     
@@ -288,7 +264,7 @@ def show_month_summary_ui():
         if not month:
             month = datetime.now().strftime('%Y-%m')
             
-        data = load_data()
+        data = load_records()
         income, expense, balance = monthly_totals(data, month)
         goal_info = monthly_goal(load_goals(), month, expense)
         
@@ -335,7 +311,7 @@ def update_table():
         selected_month.set(month)
     
     # 加载数据
-    data = load_data()
+    data = load_records()
     
     # 过滤当前月份的数据并按日期降序排序
     filtered_data = [r for r in data if r['date'].startswith(month)]
@@ -537,7 +513,7 @@ def update_chart():
         month = datetime.now().strftime('%Y-%m')
         selected_month.set(month)
 
-    data = load_data()
+    data = load_records()
     usage = {}
     for r in data:
         if r['category'] == '支出' and r['date'].startswith(month):
