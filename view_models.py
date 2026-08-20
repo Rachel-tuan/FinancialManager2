@@ -5,6 +5,7 @@
 """
 
 from controller import get_monthly_records, get_usage_breakdown
+from config import EXPENSE
 
 
 def build_table_rows(month):
@@ -17,7 +18,7 @@ def build_table_rows(month):
     rows = []
     for r in sorted(get_monthly_records(month), key=lambda x: x['date'], reverse=True):
         amount = r['amount']
-        if r['category'] == '支出':
+        if r['category'] == EXPENSE:
             amount_str = f"-{amount:.2f}"
         else:
             amount_str = f"+{amount:.2f}"

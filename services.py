@@ -7,8 +7,10 @@
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 
-INCOME_CATEGORY = '收入'
-EXPENSE_CATEGORY = '支出'
+from config import INCOME, EXPENSE
+
+INCOME_CATEGORY = INCOME
+EXPENSE_CATEGORY = EXPENSE
 
 
 def monthly_totals(records, month):

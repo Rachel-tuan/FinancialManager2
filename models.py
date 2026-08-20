@@ -8,12 +8,14 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from config import INCOME as INCOME_VALUE, EXPENSE as EXPENSE_VALUE
+
 
 class Category(Enum):
     """账单分类，JSON 中存储其 value 字符串。"""
 
-    INCOME = '收入'
-    EXPENSE = '支出'
+    INCOME = INCOME_VALUE
+    EXPENSE = EXPENSE_VALUE
 
     @classmethod
     def from_value(cls, value):

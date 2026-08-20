@@ -9,8 +9,10 @@
 import json
 import os
 
-DEFAULT_RECORDS_FILE = 'records.json'
-DEFAULT_GOALS_FILE = 'goals.json'
+from config import DATA_FILE, GOAL_FILE
+
+DEFAULT_RECORDS_FILE = DATA_FILE
+DEFAULT_GOALS_FILE = GOAL_FILE
 
 
 def load_records(filepath=DEFAULT_RECORDS_FILE):
