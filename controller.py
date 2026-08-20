@@ -86,3 +86,25 @@ def get_monthly_summary(month):
         'balance': balance,
         'goal': monthly_goal(goals, month, expense),
     }
+
+
+def get_monthly_records(month):
+    """获取指定月份的账单记录列表（按月份过滤）。
+
+    :param month: 月份字符串（YYYY-MM）
+    :return: 该月账单记录列表（保持 JSON 中的原始字典结构）
+    """
+    return [r for r in load_records() if r['date'].startswith(month)]
+
+
+def get_usage_breakdown(month):
+    """统计指定月份的支出用途分布。
+
+    :param month: 月份字符串（YYYY-MM）
+    :return: dict {用途/备注: 支出金额合计}，仅统计支出记录
+    """
+    usage = {}
+    for r in load_records():
+        if r['category'] == Category.EXPENSE.value and r['date'].startswith(month):
+            usage[r['note']] = usage.get(r['note'], 0) + r['amount']
+    return usage

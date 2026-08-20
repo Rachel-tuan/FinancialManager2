@@ -6,8 +6,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
 from services import format_decimal
-from storage import load_records
-from controller import add_record, set_goal, get_monthly_summary
+from controller import add_record, set_goal, get_monthly_summary, get_monthly_records, get_usage_breakdown
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -274,12 +273,8 @@ def update_table():
         month = datetime.now().strftime('%Y-%m')
         selected_month.set(month)
     
-    # 加载数据
-    data = load_records()
-    
-    # 过滤当前月份的数据并按日期降序排序
-    filtered_data = [r for r in data if r['date'].startswith(month)]
-    sorted_data = sorted(filtered_data, key=lambda x: x['date'], reverse=True)
+    # 获取当前月份数据并按日期降序排序
+    sorted_data = sorted(get_monthly_records(month), key=lambda x: x['date'], reverse=True)
     
     # 填充表格
     for r in sorted_data:
@@ -477,11 +472,7 @@ def update_chart():
         month = datetime.now().strftime('%Y-%m')
         selected_month.set(month)
 
-    data = load_records()
-    usage = {}
-    for r in data:
-        if r['category'] == '支出' and r['date'].startswith(month):
-            usage[r['note']] = usage.get(r['note'], 0) + r['amount']
+    usage = get_usage_breakdown(month)
 
     ax.clear()
     if usage:
