@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib
 from decimal import Decimal, ROUND_HALF_UP
+from services import monthly_totals, monthly_goal, format_decimal
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -227,25 +228,19 @@ def update_summary():
         selected_month.set(month)
     
     data = load_data()
-    income = sum(Decimal(str(r['amount'])) for r in data if r['category'] == '收入' and r['date'].startswith(month))
-    expense = sum(Decimal(str(r['amount'])) for r in data if r['category'] == '支出' and r['date'].startswith(month))
-    balance = income - expense
-    goals = load_goals()
-    goal = goals.get(month, None)
+    income, expense, balance = monthly_totals(data, month)
+    goal_info = monthly_goal(load_goals(), month, expense)
     
     # 格式化摘要信息
     summary = f"当前月份: {month}\n\n"
-    summary += f"本月收入: {income.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-    summary += f"本月支出: {expense.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-    summary += f"当前结余: {balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n\n"
+    summary += f"本月收入: {format_decimal(income)} 元\n"
+    summary += f"本月支出: {format_decimal(expense)} 元\n"
+    summary += f"当前结余: {format_decimal(balance)} 元\n\n"
     
-    if goal is not None:
-        goal_dec = Decimal(str(goal))
-        remaining = goal_dec - expense
-        status = "达标" if remaining >= 0 else "超支"
-        summary += f"本月目标: {goal_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-        summary += f"剩余额度: {remaining.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-        summary += f"状态: {status}"
+    if goal_info is not None:
+        summary += f"本月目标: {format_decimal(goal_info.goal)} 元\n"
+        summary += f"剩余额度: {format_decimal(goal_info.remaining)} 元\n"
+        summary += f"状态: {goal_info.status}"
     else:
         summary += "本月未设置支出目标\n"
         summary += "请点击'设置月目标'按钮"
@@ -294,24 +289,19 @@ def show_month_summary_ui():
             month = datetime.now().strftime('%Y-%m')
             
         data = load_data()
-        income = sum(Decimal(str(r['amount'])) for r in data if r['category'] == '收入' and r['date'].startswith(month))
-        expense = sum(Decimal(str(r['amount'])) for r in data if r['category'] == '支出' and r['date'].startswith(month))
-        goals = load_goals()
-        goal = goals.get(month, None)
+        income, expense, balance = monthly_totals(data, month)
+        goal_info = monthly_goal(load_goals(), month, expense)
         
         result_text.delete(1.0, tk.END)
         
         result_text.insert(tk.END, f"月份: {month}\n\n")
-        result_text.insert(tk.END, f"总收入: {income.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n")
-        result_text.insert(tk.END, f"总支出: {expense.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n")
-        result_text.insert(tk.END, f"结余: {(income - expense).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n\n")
+        result_text.insert(tk.END, f"总收入: {format_decimal(income)} 元\n")
+        result_text.insert(tk.END, f"总支出: {format_decimal(expense)} 元\n")
+        result_text.insert(tk.END, f"结余: {format_decimal(balance)} 元\n\n")
         
-        if goal is not None:
-            goal_dec = Decimal(str(goal))
-            remaining = goal_dec - expense
-            status = "达标" if remaining >= 0 else "超支"
-            result_text.insert(tk.END, f"本月目标: {goal_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n")
-            result_text.insert(tk.END, f"剩余额度: {remaining.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元 ({status})")
+        if goal_info is not None:
+            result_text.insert(tk.END, f"本月目标: {format_decimal(goal_info.goal)} 元\n")
+            result_text.insert(tk.END, f"剩余额度: {format_decimal(goal_info.remaining)} 元 ({goal_info.status})")
         else:
             result_text.insert(tk.END, "本月未设置支出目标")
             
