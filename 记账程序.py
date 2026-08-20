@@ -10,6 +10,7 @@ from services import format_decimal
 from controller import get_monthly_summary
 from dialogs import AddRecordDialog, SetGoalDialog, SummaryDialog
 from view_models import build_table_rows, build_expense_chart_data
+from reports import export_figure_png, export_figure_pdf
 
 matplotlib.use('TkAgg')  # 确保使用正确的后端
 
@@ -98,7 +99,7 @@ class FinanceApp:
                                                  filetypes=[("PNG 文件", "*.png"), ("所有文件", "*.*")],
                                                  title="保存图表为 PNG")
         if file_path:
-            self.fig.savefig(file_path, dpi=300, bbox_inches='tight')
+            export_figure_png(self.fig, file_path)
             messagebox.showinfo("导出成功", f"图表已成功保存为 PNG 文件：\n{file_path}")
 
     def export_chart_pdf(self):
@@ -106,7 +107,7 @@ class FinanceApp:
                                                  filetypes=[("PDF 文件", "*.pdf"), ("所有文件", "*.*")],
                                                  title="保存图表为 PDF")
         if file_path:
-            self.fig.savefig(file_path, dpi=300, format='pdf', bbox_inches='tight')
+            export_figure_pdf(self.fig, file_path)
             messagebox.showinfo("导出成功", f"图表已成功保存为 PDF 文件：\n{file_path}")
 
 
