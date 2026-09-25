@@ -18,4 +18,10 @@ build_log.txt
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# IDE
+.vscode/
+.idea/
