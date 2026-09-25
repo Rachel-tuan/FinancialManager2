@@ -56,6 +56,21 @@ def load_goals():
 def save_goals(goals):
     _safe_write_json(GOAL_FILE, goals)
 
+SETTINGS_FILE = 'settings.json'
+def load_settings():
+    return _safe_read_json(SETTINGS_FILE, {})
+def save_settings(s):
+    _safe_write_json(SETTINGS_FILE, s)
+def get_setting(key, default=None):
+    s = load_settings()
+    return s.get(key, default) if isinstance(s, dict) else default
+def set_setting(key, value):
+    s = load_settings()
+    if not isinstance(s, dict):
+        s = {}
+    s[key] = value
+    save_settings(s)
+
 def load_categories():
     cats = _safe_read_json(CATEGORY_FILE, [])
     if not isinstance(cats, list):
@@ -363,15 +378,42 @@ def previous_month(month):
     return f"{y:04d}-{m - 1:02d}"
 
 
+def record_months():
+    """所有有记录的月份('YYYY-MM')升序列表。"""
+    data = load_data()
+    return sorted(set(r['date'][:7] for r in data if r.get('date') and len(r['date']) >= 7))
+
+
+def restart_point():
+    """断档重算模式下，当前连续记账段的起始月。
+    从最新有记录的月往回走，前一个月也有记录就继续，直到遇到没记录的月。
+    例如记录为 2025-05~2026-01、2026-08~2026-09，则返回 '2026-08'。"""
+    months = set(record_months())
+    if not months:
+        return None
+    cur = max(months)
+    while previous_month(cur) in months:
+        cur = previous_month(cur)
+    return cur
+
+
 def cumulative_balance_until(month):
-    """累计结余：所有 date 早于 month 下月初 的记录 收入-支出 之和。
-    中间若有整月无记录，该月贡献为 0，累积自然连续，负数也照常结转。"""
+    """累计结余。
+    - 断档重算模式（默认）：只从当前连续记账段的起始月累计；查询月若在断档期内则返回0。
+    - 一直累计模式：从最早记录开始累计，空月贡献0，负数照常结转。"""
     boundary = _next_month_first(month)
     data = load_data()
+    start_date = ''
+    if get_setting('restart_on_gap', True):
+        rp = restart_point()
+        if rp:
+            if month < rp:
+                return Decimal('0')
+            start_date = rp + '-01'
     inc = sum((Decimal(str(r['amount'])) for r in data
-               if r['category'] == '收入' and r['date'] < boundary), Decimal('0'))
+               if r['category'] == '收入' and start_date <= r['date'] < boundary), Decimal('0'))
     exp = sum((Decimal(str(r['amount'])) for r in data
-               if r['category'] == '支出' and r['date'] < boundary), Decimal('0'))
+               if r['category'] == '支出' and start_date <= r['date'] < boundary), Decimal('0'))
     return inc - exp
 
 
@@ -1207,6 +1249,17 @@ category_btn.pack(fill='x', pady=5)
 
 invest_btn = tk.Button(btn_frame, text='定投计划', width=14, height=2, font=normal_font, bg='#e17055', fg='white', command=lambda: open_investment_window(), relief='flat')
 invest_btn.pack(fill='x', pady=5)
+
+# 断档重算开关：停记一段时间后重新开始记账时，旧结余不再结转
+restart_var = tk.BooleanVar(value=bool(get_setting('restart_on_gap', True)))
+def on_restart_toggle():
+    set_setting('restart_on_gap', restart_var.get())
+    update_summary()
+    update_investment()
+restart_chk = tk.Checkbutton(left_panel, text='停记后重新累计', variable=restart_var,
+                             command=on_restart_toggle, font=('微软雅黑', 10),
+                             bg='#f5f6fa', fg='#273c75', anchor='w')
+restart_chk.pack(fill='x', padx=5, pady=(0, 5))
 
 # 右侧面板 - 
 right_panel = tk.Frame(main_frame, bg='#f5f6fa')

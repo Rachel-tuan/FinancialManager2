@@ -9,6 +9,7 @@ records.json
 goals.json
 rules.json
 categories.json
+settings.json
 
 # 构建/版本发布脚本与产物
 build.ps1
