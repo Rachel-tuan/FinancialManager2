@@ -1,0 +1,21 @@
+# 构建产物
+build/
+dist/
+*.exe
+分析图/
+
+# 个人财务数据（隐私，不上传）
+records.json
+goals.json
+rules.json
+categories.json
+
+# 构建/版本发布脚本与产物
+build.ps1
+version.json
+CHANGELOG.md
+build_log.txt
+
+# Python
+__pycache__/
+*.pyc
