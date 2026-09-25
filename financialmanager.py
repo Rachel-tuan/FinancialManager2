@@ -1253,6 +1253,17 @@ invest_var = tk.StringVar(value='—')
 invest_label = tk.Label(invest_frame, textvariable=invest_var, font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#d63031')
 invest_label.pack(pady=4)
 
+# 断档重算开关：停记一段时间后重新开始记账时，旧结余不再结转
+restart_var = tk.BooleanVar(value=bool(get_setting('restart_on_gap', True)))
+def on_restart_toggle():
+    set_setting('restart_on_gap', restart_var.get())
+    update_summary()
+    update_investment()
+restart_chk = tk.Checkbutton(left_panel, text='停记后重新累计', variable=restart_var,
+                             command=on_restart_toggle, font=('微软雅黑', 10, 'bold'),
+                             bg='#f5f6fa', fg='#c0392b', anchor='w')
+restart_chk.pack(fill='x', padx=5, pady=(4, 0))
+
 # 摘要信息
 summary_frame = tk.LabelFrame(left_panel, text='本月摘要', font=header_font, bg='#f5f6fa', fg='#273c75', padx=10, pady=10)
 summary_frame.pack(fill='x', pady=10)
@@ -1280,17 +1291,6 @@ category_btn.pack(fill='x', pady=5)
 
 invest_btn = tk.Button(btn_frame, text='定投计划', width=14, height=2, font=normal_font, bg='#e17055', fg='white', command=lambda: open_investment_window(), relief='flat')
 invest_btn.pack(fill='x', pady=5)
-
-# 断档重算开关：停记一段时间后重新开始记账时，旧结余不再结转
-restart_var = tk.BooleanVar(value=bool(get_setting('restart_on_gap', True)))
-def on_restart_toggle():
-    set_setting('restart_on_gap', restart_var.get())
-    update_summary()
-    update_investment()
-restart_chk = tk.Checkbutton(left_panel, text='停记后重新累计', variable=restart_var,
-                             command=on_restart_toggle, font=('微软雅黑', 10),
-                             bg='#f5f6fa', fg='#273c75', anchor='w')
-restart_chk.pack(fill='x', padx=5, pady=(0, 5))
 
 # 右侧面板 - 
 right_panel = tk.Frame(main_frame, bg='#f5f6fa')
