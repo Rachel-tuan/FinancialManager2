@@ -375,6 +375,20 @@ def cumulative_balance_until(month):
     return inc - exp
 
 
+def calc_investment(month):
+    """计算某月建议定投金额 = (上月结转正数 + 本月收入) × 20%。
+    返回 dict: carried_raw, carry, month_income, base, invest"""
+    data = load_data()
+    month_income = sum((Decimal(str(r['amount'])) for r in data
+                        if r['category'] == '收入' and r['date'].startswith(month)), Decimal('0'))
+    carried_raw = cumulative_balance_until(previous_month(month))
+    carry = max(carried_raw, Decimal('0'))
+    base = carry + month_income
+    invest = (base * Decimal('0.20')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    return {'carried_raw': carried_raw, 'carry': carry,
+            'month_income': month_income, 'base': base, 'invest': invest}
+
+
 def _is_valid_date(date_str):
     try:
         datetime.strptime(date_str, '%Y-%m-%d')
@@ -452,8 +466,15 @@ def open_add_record_window():
     tag_combo.pack(side='left', padx=5)
 
     def _update_tag_suggestion():
-        if not (tag_var.get() or '').strip():
-            tag_var.set(suggest_tag(note_var.get()))
+        # 随备注实时自动建议类别；用户一旦点进类别框手动选择，则不再覆盖。
+        # （旧逻辑只在类别框为空时建议，导致输入"零"时先被设成"未分类"，
+        #   再输入"食"就停住了，"零食"无法自动归类。）
+        try:
+            if root.focus_get() is tag_combo:
+                return
+        except Exception:
+            pass
+        tag_var.set(suggest_tag(note_var.get()))
     note_var.trace_add('write', lambda *a: _update_tag_suggestion())
     
     # 按钮框架
@@ -643,6 +664,18 @@ def update_summary():
         summary += "请点击'设置月目标'按钮"
     
     summary_var.set(summary)
+    update_investment()
+
+def update_investment():
+    """刷新左上角定投卡片：显示当前选中月份的建议定投金额。"""
+    try:
+        month = selected_month.get().strip() or datetime.now().strftime('%Y-%m')
+        if not _is_valid_month(month):
+            return
+        data = calc_investment(month)
+        invest_var.set(f"¥ {data['invest']}")
+    except Exception:
+        invest_var.set('—')
 
 def show_month_summary_ui():
     # 创建新窗口
@@ -764,14 +797,12 @@ def open_investment_window():
             messagebox.showwarning('提示', '月份格式需为 YYYY-MM！', parent=win)
             return
 
-        data = load_data()
-        month_income = sum((Decimal(str(r['amount'])) for r in data
-                            if r['category'] == '收入' and r['date'].startswith(month)), Decimal('0'))
-        prev = previous_month(month)
-        carried_raw = cumulative_balance_until(prev)      # 累计到上月末
-        carry = max(carried_raw, Decimal('0'))            # 只取正数，负数按 0 计入
-        base = carry + month_income                       # 计算基数
-        invest = (base * Decimal('0.20')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        data = calc_investment(month)
+        carried_raw = data['carried_raw']
+        carry = data['carry']
+        month_income = data['month_income']
+        base = data['base']
+        invest = data['invest']
         q = lambda x: x.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
         result_big.config(text=f'本月建议定投\n¥ {q(invest)}')
@@ -1141,6 +1172,13 @@ main_frame.pack(fill='both', expand=True, padx=20, pady=10)
 left_panel = tk.Frame(main_frame, bg='#f5f6fa', width=300)
 left_panel.pack(side='left', fill='y', padx=(0, 10))
 left_panel.pack_propagate(False)  # 防止框架缩小
+
+# 定投金额卡片（左上角，醒目显示本月建议定投）
+invest_frame = tk.LabelFrame(left_panel, text='本月定投', font=header_font, bg='#f5f6fa', fg='#273c75', padx=10, pady=6)
+invest_frame.pack(fill='x', pady=(10, 0))
+invest_var = tk.StringVar(value='—')
+invest_label = tk.Label(invest_frame, textvariable=invest_var, font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#d63031')
+invest_label.pack(pady=4)
 
 # 摘要信息
 summary_frame = tk.LabelFrame(left_panel, text='本月摘要', font=header_font, bg='#f5f6fa', fg='#273c75', padx=10, pady=10)
