@@ -1210,10 +1210,41 @@ banner.pack(fill='x')
 main_frame = tk.Frame(root, bg='#f5f6fa')
 main_frame.pack(fill='both', expand=True, padx=20, pady=10)
 
-# 左侧面板 - 包含摘要和按钮
-left_panel = tk.Frame(main_frame, bg='#f5f6fa', width=300)
-left_panel.pack(side='left', fill='y', padx=(0, 10))
-left_panel.pack_propagate(False)  # 防止框架缩小
+# 左侧面板 - 包含摘要和按钮（可滚动）
+left_outer = tk.Frame(main_frame, bg='#f5f6fa', width=300)
+left_outer.pack(side='left', fill='y', padx=(0, 10))
+left_canvas = tk.Canvas(left_outer, bg='#f5f6fa', width=280, highlightthickness=0)
+left_scroll = ttk.Scrollbar(left_outer, orient='vertical', command=left_canvas.yview)
+left_canvas.configure(yscrollcommand=left_scroll.set)
+left_scroll.pack(side='right', fill='y')
+left_canvas.pack(side='left', fill='both', expand=True)
+left_panel = tk.Frame(left_canvas, bg='#f5f6fa')
+_left_win = left_canvas.create_window((0, 0), window=left_panel, anchor='nw')
+
+def _on_left_inner_config(e):
+    left_canvas.configure(scrollregion=left_canvas.bbox('all'))
+left_panel.bind('<Configure>', _on_left_inner_config)
+def _on_left_canvas_config(e):
+    left_canvas.itemconfigure(_left_win, width=e.width)
+left_canvas.bind('<Configure>', _on_left_canvas_config)
+
+def _on_left_wheel(e):
+    left_canvas.yview_scroll(int(-1 * (e.delta / 120)), 'units')
+def _on_left_enter(e):
+    # 鼠标进入左侧时，滚轮交给左侧；离开时恢复图表滚轮
+    try:
+        chart_canvas.unbind_all('<MouseWheel>')
+    except Exception:
+        pass
+    left_canvas.bind_all('<MouseWheel>', _on_left_wheel)
+def _on_left_leave(e):
+    left_canvas.unbind_all('<MouseWheel>')
+    try:
+        chart_canvas.bind_all('<MouseWheel>', _on_mousewheel)
+    except Exception:
+        pass
+left_canvas.bind('<Enter>', _on_left_enter)
+left_canvas.bind('<Leave>', _on_left_leave)
 
 # 定投金额卡片（左上角，醒目显示本月建议定投）
 invest_frame = tk.LabelFrame(left_panel, text='本月定投', font=header_font, bg='#f5f6fa', fg='#273c75', padx=10, pady=6)
