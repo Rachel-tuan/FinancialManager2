@@ -103,6 +103,278 @@ def suggest_tag(note):
         return max(freq.items(), key=lambda x: x[1])[0]
     return '未分类'
 
+
+# ============ 预置智能分类规则（基于历史记账习惯归纳） ============
+PRESET_RULES = [
+    # 交通
+    {'keyword': '车费', 'category': '交通'},
+    {'keyword': '公交', 'category': '交通'},
+    {'keyword': '地铁', 'category': '交通'},
+    {'keyword': '打车', 'category': '交通'},
+    {'keyword': '滴滴', 'category': '交通'},
+    {'keyword': '高铁', 'category': '交通'},
+    {'keyword': '火车', 'category': '交通'},
+    {'keyword': '车票', 'category': '交通'},
+    {'keyword': '共享单车', 'category': '交通'},
+    {'keyword': '单车', 'category': '交通'},
+    {'keyword': '哈啰', 'category': '交通'},
+    {'keyword': '摩的', 'category': '交通'},
+    {'keyword': '加油', 'category': '交通'},
+    {'keyword': '停车', 'category': '交通'},
+    # 学习
+    {'keyword': '打印', 'category': '学习'},
+    {'keyword': '资料', 'category': '学习'},
+    {'keyword': '学费', 'category': '学习'},
+    {'keyword': '教材', 'category': '学习'},
+    {'keyword': '网课', 'category': '学习'},
+    {'keyword': '考试', 'category': '学习'},
+    {'keyword': '六级', 'category': '学习'},
+    {'keyword': '成绩单', 'category': '学习'},
+    {'keyword': '文具', 'category': '学习'},
+    {'keyword': '书本', 'category': '学习'},
+    {'keyword': '买书', 'category': '学习'},
+    {'keyword': '《', 'category': '学习'},
+    {'keyword': '本子', 'category': '学习'},
+    {'keyword': 'APP', 'category': '学习'},
+    # 话费 / 电费 / 会员
+    {'keyword': '话费', 'category': '话费'},
+    {'keyword': '流量', 'category': '话费'},
+    {'keyword': '电费', 'category': '电费'},
+    {'keyword': '会员', 'category': '会员'},
+    {'keyword': 'VIP', 'category': '会员'},
+    {'keyword': 'vip', 'category': '会员'},
+    {'keyword': '续费', 'category': '会员'},
+    {'keyword': '订阅', 'category': '会员'},
+    # 生活用品（具体词在前，避免被泛词误判）
+    {'keyword': '卫生巾', 'category': '生活用品'},
+    {'keyword': '内衣', 'category': '生活用品'},
+    {'keyword': '洗衣', 'category': '生活用品'},
+    {'keyword': '抽纸', 'category': '生活用品'},
+    {'keyword': '纸巾', 'category': '生活用品'},
+    {'keyword': '卫生纸', 'category': '生活用品'},
+    {'keyword': '牙膏', 'category': '生活用品'},
+    {'keyword': '牙刷', 'category': '生活用品'},
+    {'keyword': '毛巾', 'category': '生活用品'},
+    {'keyword': '手机壳', 'category': '生活用品'},
+    {'keyword': '袜子', 'category': '生活用品'},
+    {'keyword': '洗发', 'category': '生活用品'},
+    {'keyword': '沐浴', 'category': '生活用品'},
+    {'keyword': '垃圾袋', 'category': '生活用品'},
+    {'keyword': '洗衣粉', 'category': '生活用品'},
+    {'keyword': '衣架', 'category': '生活用品'},
+    {'keyword': '衣服', 'category': '生活用品'},
+    {'keyword': '内裤', 'category': '生活用品'},
+    {'keyword': '拖鞋', 'category': '生活用品'},
+    {'keyword': '卷纸', 'category': '生活用品'},
+    {'keyword': '洗浴', 'category': '生活用品'},
+    {'keyword': '置物架', 'category': '生活用品'},
+    {'keyword': '水杯', 'category': '生活用品'},
+    {'keyword': '伞', 'category': '生活用品'},
+    {'keyword': '梯子', 'category': '生活用品'},
+    {'keyword': '鼠标', 'category': '生活用品'},
+    {'keyword': '耳机', 'category': '生活用品'},
+    {'keyword': '手环', 'category': '生活用品'},
+    {'keyword': '手表', 'category': '生活用品'},
+    {'keyword': '凉席', 'category': '生活用品'},
+    {'keyword': '太阳镜', 'category': '生活用品'},
+    {'keyword': '收纳袋', 'category': '生活用品'},
+    {'keyword': '防尘膜', 'category': '生活用品'},
+    {'keyword': '创口贴', 'category': '生活用品'},
+    {'keyword': '排插', 'category': '生活用品'},
+    {'keyword': '洗洁精', 'category': '生活用品'},
+    {'keyword': '短裤', 'category': '生活用品'},
+    # 其他
+    {'keyword': '理发', 'category': '其他'},
+    {'keyword': '剪头发', 'category': '其他'},
+    {'keyword': '看电影', 'category': '其他'},
+    # 饮食（具体在前，泛词兜底在后）
+    {'keyword': '自选餐', 'category': '饮食'},
+    {'keyword': '减脂餐', 'category': '饮食'},
+    {'keyword': '小碗菜', 'category': '饮食'},
+    {'keyword': '一荤', 'category': '饮食'},
+    {'keyword': '两荤', 'category': '饮食'},
+    {'keyword': '早餐', 'category': '饮食'},
+    {'keyword': '午餐', 'category': '饮食'},
+    {'keyword': '晚餐', 'category': '饮食'},
+    {'keyword': '夜宵', 'category': '饮食'},
+    {'keyword': '自助餐', 'category': '饮食'},
+    {'keyword': '聚餐', 'category': '饮食'},
+    {'keyword': '外卖', 'category': '饮食'},
+    {'keyword': '煎饼', 'category': '饮食'},
+    {'keyword': '包子', 'category': '饮食'},
+    {'keyword': '馒头', 'category': '饮食'},
+    {'keyword': '花卷', 'category': '饮食'},
+    {'keyword': '烧麦', 'category': '饮食'},
+    {'keyword': '小笼包', 'category': '饮食'},
+    {'keyword': '饭团', 'category': '饮食'},
+    {'keyword': '玉米', 'category': '饮食'},
+    {'keyword': '饺子', 'category': '饮食'},
+    {'keyword': '馄饨', 'category': '饮食'},
+    {'keyword': '拌面', 'category': '饮食'},
+    {'keyword': '拉面', 'category': '饮食'},
+    {'keyword': '汤面', 'category': '饮食'},
+    {'keyword': '炒粉', 'category': '饮食'},
+    {'keyword': '拌粉', 'category': '饮食'},
+    {'keyword': '土豆粉', 'category': '饮食'},
+    {'keyword': '土豆泥', 'category': '饮食'},
+    {'keyword': '米粉', 'category': '饮食'},
+    {'keyword': '米线', 'category': '饮食'},
+    {'keyword': '鸡公煲', 'category': '饮食'},
+    {'keyword': '麻辣香锅', 'category': '饮食'},
+    {'keyword': '石锅', 'category': '饮食'},
+    {'keyword': '烤肉', 'category': '饮食'},
+    {'keyword': '火锅', 'category': '饮食'},
+    {'keyword': '塔斯汀', 'category': '饮食'},
+    {'keyword': '汉堡', 'category': '饮食'},
+    {'keyword': '烤鸭', 'category': '饮食'},
+    {'keyword': '鸭腿', 'category': '饮食'},
+    {'keyword': '鸡腿', 'category': '饮食'},
+    {'keyword': '牛肉', 'category': '饮食'},
+    {'keyword': '炸鸡', 'category': '饮食'},
+    {'keyword': '烧烤', 'category': '饮食'},
+    {'keyword': '烤串', 'category': '饮食'},
+    {'keyword': '零食', 'category': '饮食'},
+    {'keyword': '辣条', 'category': '饮食'},
+    {'keyword': '坚果', 'category': '饮食'},
+    {'keyword': '瓜子', 'category': '饮食'},
+    {'keyword': '水果', 'category': '饮食'},
+    {'keyword': '葡萄', 'category': '饮食'},
+    {'keyword': '柚子', 'category': '饮食'},
+    {'keyword': '甜瓜', 'category': '饮食'},
+    {'keyword': '蓝莓', 'category': '饮食'},
+    {'keyword': '果粒茶', 'category': '饮食'},
+    {'keyword': '沙拉', 'category': '饮食'},
+    {'keyword': '牛奶', 'category': '饮食'},
+    {'keyword': '酸奶', 'category': '饮食'},
+    {'keyword': '豆浆', 'category': '饮食'},
+    {'keyword': '奶茶', 'category': '饮食'},
+    {'keyword': '饮料', 'category': '饮食'},
+    {'keyword': '咖啡', 'category': '饮食'},
+    {'keyword': '鸡蛋', 'category': '饮食'},
+    {'keyword': '卤蛋', 'category': '饮食'},
+    {'keyword': '西兰花', 'category': '饮食'},
+    {'keyword': '空心菜', 'category': '饮食'},
+    {'keyword': '蔬菜', 'category': '饮食'},
+    {'keyword': '青菜', 'category': '饮食'},
+    {'keyword': '买菜', 'category': '饮食'},
+    {'keyword': '面包', 'category': '饮食'},
+    {'keyword': '蛋糕', 'category': '饮食'},
+    {'keyword': '泡面', 'category': '饮食'},
+    {'keyword': '方便面', 'category': '饮食'},
+    {'keyword': '小米粥', 'category': '饮食'},
+    {'keyword': '粥', 'category': '饮食'},
+    {'keyword': '米饭', 'category': '饮食'},
+    {'keyword': '快餐', 'category': '饮食'},
+    {'keyword': '油条', 'category': '饮食'},
+    {'keyword': '凉皮', 'category': '饮食'},
+    {'keyword': '西瓜', 'category': '饮食'},
+    {'keyword': '手抓饼', 'category': '饮食'},
+    {'keyword': '西红柿', 'category': '饮食'},
+    {'keyword': '蛋堡', 'category': '饮食'},
+    {'keyword': '柠檬水', 'category': '饮食'},
+    {'keyword': '红枣', 'category': '饮食'},
+    {'keyword': '红薯干', 'category': '饮食'},
+    {'keyword': '苹果醋', 'category': '饮食'},
+    {'keyword': '烤红薯', 'category': '饮食'},
+    {'keyword': '螺狮粉', 'category': '饮食'},
+    {'keyword': '馅饼', 'category': '饮食'},
+    {'keyword': '黄瓜', 'category': '饮食'},
+    {'keyword': '圣女果', 'category': '饮食'},
+    {'keyword': '香蕉', 'category': '饮食'},
+    {'keyword': '菠萝', 'category': '饮食'},
+    {'keyword': '酱香饼', 'category': '饮食'},
+    {'keyword': '土豆卷', 'category': '饮食'},
+    {'keyword': '韭菜盒子', 'category': '饮食'},
+    {'keyword': '烧饼', 'category': '饮食'},
+    {'keyword': '卷饼', 'category': '饮食'},
+    {'keyword': '便当', 'category': '饮食'},
+    {'keyword': '奶', 'category': '饮食'},
+    {'keyword': '素', 'category': '饮食'},
+    {'keyword': '餐', 'category': '饮食'},
+    {'keyword': '面', 'category': '饮食'},
+    {'keyword': '饭', 'category': '饮食'},
+]
+
+# 这些类别若不存在，预置时一并补齐
+PRESET_CATEGORIES = sorted(set([r['category'] for r in PRESET_RULES]))
+
+
+def ensure_preset_rules():
+    """首次使用（rules.json 为空）时自动灌入基于历史习惯归纳的智能分类规则。"""
+    try:
+        rules = load_rules()
+        if not rules:
+            save_rules([dict(r) for r in PRESET_RULES])
+        # 同时补齐类别列表
+        cats = load_categories()
+        changed = False
+        for c in PRESET_CATEGORIES:
+            if c not in cats:
+                cats.append(c)
+                changed = True
+        if changed:
+            save_categories(cats)
+    except Exception:
+        pass
+
+
+def apply_rules_to_all_records():
+    """把关键词规则应用到历史记录中尚未分类（无 tag 或为'未分类'）的条目，
+    不覆盖用户手动标注过的类别。返回本次补全的条数。"""
+    data = load_data()
+    rules = load_rules()
+    if not rules:
+        return 0
+    changed = 0
+    for r in data:
+        note = (r.get('note') or '').strip()
+        if not note:
+            continue
+        old_tag = (r.get('tag') or '').strip()
+        if old_tag and old_tag != '未分类':
+            continue
+        new_tag = None
+        for rule in rules:
+            kw = (rule.get('keyword') or '').strip()
+            if kw and kw in note:
+                new_tag = rule['category']
+                break
+        if new_tag and new_tag != old_tag:
+            r['tag'] = new_tag
+            changed += 1
+    if changed:
+        save_data(data)
+    return changed
+
+
+# ============ 月份与累计结余工具（需求1：余额跨月滚动累积） ============
+def _next_month_first(month):
+    """返回 month('YYYY-MM') 下一个月的 1 号日期字符串，作为累计的开区间边界。"""
+    y, m = int(month[:4]), int(month[5:7])
+    if m == 12:
+        return f"{y + 1:04d}-01-01"
+    return f"{y:04d}-{m + 1:02d}-01"
+
+
+def previous_month(month):
+    y, m = int(month[:4]), int(month[5:7])
+    if m == 1:
+        return f"{y - 1:04d}-12"
+    return f"{y:04d}-{m - 1:02d}"
+
+
+def cumulative_balance_until(month):
+    """累计结余：所有 date 早于 month 下月初 的记录 收入-支出 之和。
+    中间若有整月无记录，该月贡献为 0，累积自然连续，负数也照常结转。"""
+    boundary = _next_month_first(month)
+    data = load_data()
+    inc = sum((Decimal(str(r['amount'])) for r in data
+               if r['category'] == '收入' and r['date'] < boundary), Decimal('0'))
+    exp = sum((Decimal(str(r['amount'])) for r in data
+               if r['category'] == '支出' and r['date'] < boundary), Decimal('0'))
+    return inc - exp
+
+
 def _is_valid_date(date_str):
     try:
         datetime.strptime(date_str, '%Y-%m-%d')
@@ -340,16 +612,25 @@ def update_summary():
     data = load_data()
     income = sum((Decimal(str(r['amount'])) for r in data if r['category'] == '收入' and r['date'].startswith(month)), Decimal('0'))
     expense = sum((Decimal(str(r['amount'])) for r in data if r['category'] == '支出' and r['date'].startswith(month)), Decimal('0'))
-    balance = income - expense
+    month_balance = income - expense
+
+    # 跨月滚动累积：上月末累计结余（负数也结转），再加本月即当前累计结余
+    prev_month = previous_month(month)
+    carried = cumulative_balance_until(prev_month)      # 历史结转（到上月末）
+    cumulative = carried + month_balance                # 累计结余（到本月末）
+
+    q = lambda x: x.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     goals = load_goals()
     goal = goals.get(month, None)
-    
+
     # 格式化摘要信息
     summary = f"当前月份: {month}\n\n"
-    summary += f"本月收入: {income.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-    summary += f"本月支出: {expense.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n"
-    summary += f"当前结余: {balance.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)} 元\n\n"
-    
+    summary += f"本月收入: {q(income)} 元\n"
+    summary += f"本月支出: {q(expense)} 元\n"
+    summary += f"本月结余: {q(month_balance)} 元\n"
+    summary += f"历史结转(上月末): {q(carried)} 元\n"
+    summary += f"累计结余: {q(cumulative)} 元\n\n"
+
     if goal is not None:
         goal_dec = Decimal(str(goal))
         remaining = goal_dec - expense
@@ -446,6 +727,75 @@ def show_month_summary_ui():
     
     # 设置初始焦点
     month_entry.focus_set()
+
+def open_investment_window():
+    """定投计划界面：每月自动计算可投资金额 = (上月结转正数 + 本月收入) × 20%。"""
+    win = tk.Toplevel(root)
+    win.title('定投计划')
+    win.geometry('460x520')
+    win.configure(bg='#f5f6fa')
+    win.resizable(False, False)
+    win.transient(root)
+    win.grab_set()
+
+    tk.Label(win, text='每月定投计划', font=('微软雅黑', 16, 'bold'), bg='#f5f6fa', fg='#273c75').pack(pady=10)
+
+    # 月份选择
+    month_frame = tk.Frame(win, bg='#f5f6fa')
+    month_frame.pack(pady=5)
+    tk.Label(month_frame, text='月份:', font=('微软雅黑', 12), bg='#f5f6fa').pack(side='left', padx=5)
+    month_var = tk.StringVar(value=datetime.now().strftime('%Y-%m'))
+    month_entry = tk.Entry(month_frame, textvariable=month_var, font=('微软雅黑', 12), width=12)
+    month_entry.pack(side='left', padx=5)
+
+    # 大字结果区
+    result_big = tk.Label(win, text='', font=('微软雅黑', 22, 'bold'), bg='#f5f6fa', fg='#d63031')
+    result_big.pack(pady=15)
+
+    detail_label = tk.Label(win, text='', font=('微软雅黑', 11), bg='#f5f6fa', fg='#2d3436', justify='left')
+    detail_label.pack(pady=5, padx=20, anchor='w')
+
+    def calc():
+        month = month_var.get().strip()
+        if not month:
+            month = datetime.now().strftime('%Y-%m')
+            month_var.set(month)
+        elif not _is_valid_month(month):
+            messagebox.showwarning('提示', '月份格式需为 YYYY-MM！', parent=win)
+            return
+
+        data = load_data()
+        month_income = sum((Decimal(str(r['amount'])) for r in data
+                            if r['category'] == '收入' and r['date'].startswith(month)), Decimal('0'))
+        prev = previous_month(month)
+        carried_raw = cumulative_balance_until(prev)      # 累计到上月末
+        carry = max(carried_raw, Decimal('0'))            # 只取正数，负数按 0 计入
+        base = carry + month_income                       # 计算基数
+        invest = (base * Decimal('0.20')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        q = lambda x: x.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+        result_big.config(text=f'本月建议定投\n¥ {q(invest)}')
+        neg_note = '（上月为负，按 0 计入）' if carried_raw < 0 else ''
+        detail = (
+            f"计算月份：{month}\n"
+            f"上月结转余额：{q(carried_raw)} 元 {neg_note}\n"
+            f"计入投资的结转：{q(carry)} 元\n"
+            f"本月收入合计：{q(month_income)} 元\n"
+            f"──────────────────\n"
+            f"计算基数：{q(base)} 元\n"
+            f"定投比例：20%\n"
+            f"建议定投金额：{q(invest)} 元"
+        )
+        detail_label.config(text=detail)
+
+    tk.Button(win, text='计算', width=12, font=('微软雅黑', 12), bg='#00b894', fg='white',
+              relief='flat', command=calc).pack(pady=10)
+    tk.Button(win, text='关闭', width=12, font=('微软雅黑', 12), bg='#d63031', fg='white',
+              relief='flat', command=win.destroy).pack()
+
+    calc()
+    month_entry.focus_set()
+
 
 def open_category_manager_window():
     win = tk.Toplevel(root)
@@ -777,6 +1127,12 @@ title_frame.pack(fill='x')
 title_label = tk.Label(title_frame, text='个人记账管理系统', font=title_font, bg='#273c75', fg='white')
 title_label.pack(pady=10)
 
+# 信念横幅（需求4：醒目突出）
+banner = tk.Label(root,
+                  text='我是有能力把握将来十倍甚至百倍资产增长的人。',
+                  font=('微软雅黑', 15, 'bold'), bg='#273c75', fg='#fdcb6e')
+banner.pack(fill='x')
+
 # 创建主布局框架
 main_frame = tk.Frame(root, bg='#f5f6fa')
 main_frame.pack(fill='both', expand=True, padx=20, pady=10)
@@ -810,6 +1166,9 @@ stat_btn.pack(fill='x', pady=5)
 
 category_btn = tk.Button(btn_frame, text='类别管理', width=14, height=2, font=normal_font, bg='#a29bfe', fg='white', command=lambda: open_category_manager_window(), relief='flat')
 category_btn.pack(fill='x', pady=5)
+
+invest_btn = tk.Button(btn_frame, text='定投计划', width=14, height=2, font=normal_font, bg='#e17055', fg='white', command=lambda: open_investment_window(), relief='flat')
+invest_btn.pack(fill='x', pady=5)
 
 # 右侧面板 - 
 right_panel = tk.Frame(main_frame, bg='#f5f6fa')
@@ -927,6 +1286,11 @@ def _on_shift_mousewheel(event):
     chart_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
 chart_canvas.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
 
+# 鼠标纵向滚动（只绑定一次，避免 update_chart 反复叠加 handler）
+def _on_mousewheel(event):
+    chart_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+chart_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
 # 更新图表函数
 def update_chart():
     month = selected_month.get().strip()
@@ -999,12 +1363,9 @@ def update_chart():
     chart_canvas.config(scrollregion=chart_canvas.bbox('all'))
     chart_canvas.configure(yscrollcommand=chart_scrollbar.set, xscrollcommand=chart_h_scrollbar.set)
 
-    # 绑定鼠标滚轮事件
-    def _on_mousewheel(event):
-        chart_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-    chart_canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
 
+ensure_preset_rules()
 
 update_summary()
 update_table()
