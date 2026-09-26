@@ -1373,6 +1373,10 @@ pdf_btn = tk.Button(export_btn_frame, text="导出为 PDF", command=export_chart
                     bg="#6c5ce7", fg="white", font=("微软雅黑", 10), padx=10, pady=5)
 pdf_btn.pack(side='left', padx=10)
 
+big_btn = tk.Button(export_btn_frame, text="放大查看", command=lambda: open_big_chart(),
+                    bg="#e17055", fg="white", font=("微软雅黑", 10), padx=10, pady=5)
+big_btn.pack(side='left', padx=10)
+
 
 # 创建一个带滚动条的框架来容纳图表
 chart_canvas_frame = tk.Frame(chart_frame, bg='#f5f6fa')
@@ -1397,7 +1401,7 @@ chart_inner_frame = tk.Frame(chart_canvas, bg='#f5f6fa')
 chart_canvas.create_window((0, 0), window=chart_inner_frame, anchor='nw')
 
 # 创建图表
-fig = plt.Figure(figsize=(12, 16), dpi=100)
+fig = plt.Figure(figsize=(10, 6), dpi=100)
 ax = fig.add_subplot(111)
 canvas = FigureCanvasTkAgg(fig, master=chart_inner_frame)
 canvas.get_tk_widget().pack(fill='both', expand=True, padx=5, pady=5)
@@ -1412,6 +1416,49 @@ chart_canvas.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
 def _on_mousewheel(event):
     chart_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 chart_canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+def open_big_chart():
+    win = tk.Toplevel(root)
+    win.title('消费分析大图')
+    win.geometry('1200x800')
+    month = selected_month.get().strip()
+    big_fig = plt.Figure(figsize=(12, 8), dpi=100)
+    big_ax = big_fig.add_subplot(111)
+    data = load_data()
+    usage = {}
+    for r in data:
+        if r['category'] == '支出' and r['date'].startswith(month):
+            key = (r.get('tag') or '').strip() or '未分类'
+            usage[key] = usage.get(key, 0) + r['amount']
+    if usage:
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'SimSun']
+        plt.rcParams['axes.unicode_minus'] = False
+        sorted_usage = sorted(usage.items(), key=lambda x: x[1], reverse=True)
+        labels = [i[0] for i in sorted_usage]
+        sizes = [i[1] for i in sorted_usage]
+        total = sum(sizes)
+        colors = ['#00b894','#00cec9','#0984e3','#6c5ce7','#fdcb6e','#e84393','#d63031','#e17055','#74b9ff']
+        if len(labels) > len(colors):
+            colors = colors * (len(labels)//len(colors)+1)
+        bars = big_ax.barh(labels, sizes, color=colors[:len(labels)], height=0.6)
+        big_ax.invert_yaxis()
+        for bar in bars:
+            w = bar.get_width()
+            pct = w/total*100
+            big_ax.text(w+total*0.01, bar.get_y()+bar.get_height()/2,
+                        f'{w:.2f}元 ({pct:.1f}%)', va='center', fontsize=12, fontfamily='SimHei')
+        big_ax.set_title(f'{month} 类别消费分布', fontsize=18, fontweight='bold', pad=20, fontfamily='SimHei')
+        big_ax.set_xlabel('支出金额 (元)', fontsize=12, fontfamily='SimHei')
+        big_ax.tick_params(axis='y', labelsize=12)
+        for lb in big_ax.get_yticklabels():
+            lb.set_fontfamily('SimHei')
+    else:
+        big_ax.text(0.5, 0.5, '本月暂无支出', ha='center', va='center', fontsize=16, fontweight='bold', fontfamily='SimHei')
+    big_fig.tight_layout()
+    big_canvas = FigureCanvasTkAgg(big_fig, master=win)
+    big_canvas.get_tk_widget().pack(fill='both', expand=True)
+    big_canvas.draw()
+
 
 # 更新图表函数
 def update_chart():
@@ -1471,8 +1518,8 @@ def update_chart():
             label.set_fontfamily('SimHei')
 
         # 根据条目数量调整图表高度
-        fig.set_figheight(max(5, len(labels) * 0.6))
-        fig.set_figwidth(12)  # 加宽
+        fig.set_figheight(max(4, min(9, len(labels) * 0.5)))
+        fig.set_figwidth(10)
     else:
         ax.text(0.5, 0.5, '本月暂无支出', ha='center', va='center', fontsize=14, fontweight='bold', fontfamily='SimHei')
 
@@ -1484,6 +1531,7 @@ def update_chart():
     chart_inner_frame.update_idletasks()
     chart_canvas.config(scrollregion=chart_canvas.bbox('all'))
     chart_canvas.configure(yscrollcommand=chart_scrollbar.set, xscrollcommand=chart_h_scrollbar.set)
+    chart_canvas.yview_moveto(0)
 
 
 
